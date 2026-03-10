@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe Testing - ChatBI 评测平台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        .dark .glass {
+            background: rgba(30, 30, 40, 0.95);
+        }
+        .upload-zone {
+            border: 2px dashed #cbd5e1;
+            transition: all 0.3s ease;
+        }
+        .upload-zone:hover, .upload-zone.drag-over {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+        .progress-bar {
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .pulse-dot {
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .table-row:hover {
+            background: rgba(102, 126, 234, 0.03);
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .dark ::-webkit-scrollbar-track { background: #1e293b; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+    <!-- Header -->
+    <header class="gradient-bg text-white py-6 px-8 shadow-lg">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-2xl font-bold">ChatBI 评测平台</h1>
+                    <p class="text-white/70 text-sm">Vibe Testing</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="toggleTheme()" class="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition">
+                    <svg id="themeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-6 space-y-6">
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div class="glass rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-slate-800 dark:text-slate-100" id="totalTests">0</p>
+                        <p class="text-sm text-slate-500">总测试数</p>
+                    </div>
+                </div>
+            </div>
+            <div class="glass rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-yellow-600 dark:text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-slate-800 dark:text-slate-100" id="pendingTests">0</p>
+                        <p class="text-sm text-slate-500">待执行</p>
+                    </div>
+                </div>
+            </div>
+            <div class="glass rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-slate-800 dark:text-slate-100" id="successTests">0</p>
+                        <p class="text-sm text-slate-500">成功</p>
+                    </div>
+                </div>
+            </div>
+            <div class="glass rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-red-600 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-slate-800 dark:text-slate-100" id="errorTests">0</p>
+                        <p class="text-sm text-slate-500">失败</p>
+                    </div>
+                </div>
+            </div>
+            <div class="glass rounded-2xl p-5 shadow-sm border border-slate-200 dark:border-slate-700">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-xl bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="text-2xl font-bold text-slate-800 dark:text-slate-100" id="successRate">0%</p>
+                        <p class="text-sm text-slate-500">成功率</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="grid lg:grid-cols-3 gap-6">
+            <!-- Left Panel -->
+            <div class="lg:col-span-1 space-y-6">
+                <!-- Upload Card -->
+                <div class="glass rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+                    <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        </svg>
+                        上传测试文件
+                    </h2>
+                    <div id="uploadZone" class="upload-zone rounded-xl p-8 text-center cursor-pointer" onclick="document.getElementById('fileInput').click()">
+                        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleFileUpload(event)">
+                        <div id="uploadIcon">
+                            <svg class="w-12 h-12 mx-auto text-slate-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                            </svg>
+                            <p class="text-slate-600 dark:text-slate-400 font-medium">拖拽或点击上传</p>
+                            <p class="text-slate-400 text-sm mt-1">支持 .xlsx, .xls, .csv</p>
+                        </div>
+                        <div id="uploadedFile" class="hidden">
+                            <svg class="w-12 h-12 mx-auto text-green-500 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <p class="text-green-600 font-medium" id="uploadedFileName">文件已加载</p>
+                            <p class="text-slate-400 text-sm mt-1" id="uploadedFileCount">0 条测试数据</p>
+                        </div>
+                    </div>
+
+                    <!-- Excel 格式说明 -->
+                    <div class="mt-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl">
+                        <button onclick="toggleExcelHelp()" class="flex items-center justify-between w-full text-left">
+                            <span class="text-xs text-blue-700 dark:text-blue-400 font-medium">📋 Excel 文件格式要求</span>
+                            <svg id="excelHelpIcon" class="w-4 h-4 text-blue-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        <div id="excelHelpContent" class="hidden mt-3 text-xs text-blue-600 dark:text-blue-400 space-y-2">
+                            <p>Excel 文件需包含以下列（列名必须完全匹配）：</p>
+                            <div class="grid grid-cols-2 gap-1 font-mono text-[10px]">
+                                <span class="bg-white dark:bg-slate-800 px-2 py-1 rounded">测试ID</span>
+                                <span class="bg-white dark:bg-slate-800 px-2 py-1 rounded">难度</span>
+                                <span class="bg-white dark:bg-slate-800 px-2 py-1 rounded">指标</span>
+                                <span class="bg-white dark:bg-slate-800 px-2 py-1 rounded">维度</span>
+                                <span class="bg-white dark:bg-slate-800 px-2 py-1 rounded col-span-2">用户问题 (必填)</span>
+                                <span class="bg-white dark:bg-slate-800 px-2 py-1 rounded col-span-2">预期SQL逻辑 (可选)</span>
+                            </div>
+                            <p class="mt-2 opacity-70">💡 提示：至少需要包含「用户问题」列，其他列为可选。</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- API Config Card -->
+                <div class="glass rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+                    <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-4 flex items-center gap-2">
+                        <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        API 配置
+                    </h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">接口地址</label>
+                            <div class="flex gap-2">
+                                <input type="text" id="apiUrl" value="http://tdify.fat0.qa.nt.ctripcorp.com/v1/chat-messages" class="flex-1 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition text-sm">
+                                <button onclick="testConnection()" class="px-4 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition text-sm font-medium">测试</button>
+                            </div>
+                            <p id="connectionStatus" class="text-xs mt-1 hidden"></p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Authorization</label>
+                            <input type="text" id="apiToken" value="Bearer app-GoAF9HFpx0KPKOcqxlCmhBvV" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-purple-500 outline-none transition text-sm font-mono">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">工号 (emp_code)</label>
+                                <input type="text" id="empCode" value="S66597" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-purple-500 outline-none text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">当前时间</label>
+                                <input type="text" id="currentTime" value="2026-02-06 11:00:00" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-purple-500 outline-none text-sm">
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">并发数</label>
+                                <input type="number" id="concurrency" value="3" min="1" max="10" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-purple-500 outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">超时(秒)</label>
+                                <input type="number" id="timeout" value="60" min="5" max="300" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-purple-500 outline-none">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Control Buttons -->
+                <div class="glass rounded-2xl p-6 shadow-sm border border-slate-200 dark:border-slate-700">
+                    <div class="grid grid-cols-2 gap-3">
+                        <button id="startBtn" onclick="startTesting()" disabled class="px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-xl font-medium hover:from-purple-600 hover:to-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            开始测试
+                        </button>
+                        <button id="pauseBtn" onclick="pauseTesting()" disabled class="px-4 py-3 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl font-medium hover:bg-slate-300 dark:hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            暂停
+                        </button>
+                        <button id="stopBtn" onclick="stopTesting()" disabled class="px-4 py-3 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-xl font-medium hover:bg-red-200 dark:hover:bg-red-900/50 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/>
+                            </svg>
+                            停止
+                        </button>
+                        <button id="exportBtn" onclick="exportResults()" disabled class="px-4 py-3 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 rounded-xl font-medium hover:bg-green-200 dark:hover:bg-green-900/50 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center justify-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                            </svg>
+                            导出
+                        </button>
+                    </div>
+
+                    <!-- Progress -->
+                    <div class="mt-4" id="progressContainer" style="display: none;">
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-slate-600 dark:text-slate-400">执行进度</span>
+                            <span class="text-slate-800 dark:text-slate-200 font-medium" id="progressText">0/0</span>
+                        </div>
+                        <div class="h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                            <div id="progressBar" class="progress-bar h-full rounded-full" style="width: 0%"></div>
+                        </div>
+                        <div class="flex justify-between text-xs text-slate-500 mt-1">
+                            <span id="currentStatus">准备中...</span>
+                            <span id="estimatedTime">--:--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel - Results Table -->
+            <div class="lg:col-span-2">
+                <div class="glass rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <!-- Table Header -->
+                    <div class="p-4 border-b border-slate-200 dark:border-slate-700">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <h2 class="text-lg font-semibold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                                测试结果
+                            </h2>
+                            <div class="flex items-center gap-3">
+                                <select id="statusFilter" onchange="filterResults()" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm text-slate-700 dark:text-slate-300 outline-none">
+                                    <option value="all">全部状态</option>
+                                    <option value="pending">待执行</option>
+                                    <option value="running">执行中</option>
+                                    <option value="success">成功</option>
+                                    <option value="error">失败</option>
+                                </select>
+                                <div class="relative">
+                                    <input type="text" id="searchInput" onkeyup="filterResults()" placeholder="搜索..." class="pl-8 pr-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm w-40 focus:w-56 transition-all outline-none">
+                                    <svg class="w-4 h-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-slate-50 dark:bg-slate-800/50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onclick="sortTable('id')">
+                                        ID <span class="sort-icon">↕</span>
+                                    </th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">难度</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">指标</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider w-1/3">用户问题</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">状态</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800" onclick="sortTable('time')">
+                                        耗时 <span class="sort-icon">↕</span>
+                                    </th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsBody" class="divide-y divide-slate-200 dark:divide-slate-700">
+                                <tr>
+                                    <td colspan="7" class="px-4 py-12 text-center text-slate-400">
+                                        <svg class="w-16 h-16 mx-auto mb-4 text-slate-300 dark:text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                        </svg>
+                                        <p>请上传Excel文件开始测试</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Result Modal -->
+    <div id="resultModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-100" id="modalTitle">测试详情</h3>
+                <button onclick="closeModal()" class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
+                    <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="p-4 overflow-y-auto flex-1" id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // ============ 配置 ============
+        const CONFIG = {
+            apiUrl: 'http://tdify.fat0.qa.nt.ctripcorp.com/v1/chat-messages',
+            defaultToken: 'Bearer app-GoAF9HFpx0KPKOcqxlCmhBvV',
+            defaultEmpCode: 'S66597'
+        };
+
+        // ============ State ============
+        let testData = [];
+        let results = [];
+        let isRunning = false;
+        let isPaused = false;
+        let startTime = null;
+
+        // ============ Toggle Excel Help ============
+        function toggleExcelHelp() {
+            const content = document.getElementById('excelHelpContent');
+            const icon = document.getElementById('excelHelpIcon');
+            content.classList.toggle('hidden');
+            icon.style.transform = content.classList.contains('hidden') ? '' : 'rotate(180deg)';
+        }
+
+        // ============ Theme ============
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark');
+            localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+            const icon = document.getElementById('themeIcon');
+            if (document.documentElement.classList.contains('dark')) {
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>';
+            } else {
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>';
+            }
+        }
+
+        if (localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        }
+
+        // ============ Test Connection ============
+        async function testConnection() {
+            const apiUrl = document.getElementById('apiUrl').value;
+            const apiToken = document.getElementById('apiToken').value;
+            const empCode = document.getElementById('empCode').value || CONFIG.defaultEmpCode;
+            const currentTime = document.getElementById('currentTime').value || '2026-02-06 11:00:00';
+
+            const statusEl = document.getElementById('connectionStatus');
+            statusEl.classList.remove('hidden');
+            statusEl.innerHTML = '<span class="text-blue-500">测试中...</span>';
+
+            const requestBody = {
+                inputs: {
+                    emp_code: empCode,
+                    current_time: currentTime
+                },
+                query: '测试连接',
+                response_mode: 'blocking',
+                user: empCode
+            };
+
+            const start = Date.now();
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': apiToken
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                const time = Date.now() - start;
+                const data = await response.json();
+
+                if (response.ok) {
+                    statusEl.innerHTML = `<span class="text-green-500">✓ 连接成功 (${time}ms)</span>`;
+                } else {
+                    statusEl.innerHTML = `<span class="text-red-500">✗ HTTP ${response.status}: ${data.message || data.error || '未知错误'}</span>`;
+                }
+            } catch (err) {
+                statusEl.innerHTML = `<span class="text-red-500">✗ ${err.name === 'TypeError' ? '网络/CORS错误 - 请检查URL或使用代理' : err.message}</span>`;
+            }
+        }
+
+        // ============ 结果解析 ============
+        function extractFinalAnswerOrRaw(text) {
+            if (!text || !text.includes("{")) return text;
+            for (let i = 0; i < text.length; i++) {
+                if (text.charAt(i) !== '{') continue;
+                try {
+                    const dto = JSON.parse(text.substring(i));
+                    if (dto.taskPlanYaml && dto.finalAnswer) {
+                        return formatChatBiAnswer(dto);
+                    }
+                } catch (e) {}
+            }
+            return text;
+        }
+
+        function formatChatBiAnswer(dto) {
+            let result = '';
+            if (dto.finalAnswer) {
+                result += dto.finalAnswer + '\n\n';
+            }
+            if (dto.taskResults && dto.taskResults.length > 0) {
+                result += '执行计划：\n';
+                dto.taskResults.forEach(task => {
+                    result += '\n' + task.taskId + '：' + task.taskDesc + '\n';
+                    result += '执行状态：' + task.status + '\n';
+                    if (task.status !== 'SUCCESS') {
+                        result += '执行结果：执行失败\n';
+                        return;
+                    }
+                    const output = task.output;
+                    if (!output) return;
+                    if (task.taskType === 'QUERY_DATA') {
+                        if (output.query_result && output.query_result.length > 0) {
+                            result += '执行结果：';
+                            output.query_result.forEach(row => {
+                                Object.entries(row).forEach(([k, v]) => {
+                                    result += k + '=' + v + ' ';
+                                });
+                            });
+                            result += '\n';
+                        }
+                        if (output.generated_sql) {
+                            result += '执行SQL：' + output.generated_sql + '\n';
+                        }
+                    } else if (task.taskType === 'SUMMARISE') {
+                        if (output.answer) {
+                            result += '执行结果：' + output.answer + '\n';
+                        }
+                    } else {
+                        result += '执行结果：' + JSON.stringify(output) + '\n';
+                    }
+                });
+            }
+            return result;
+        }
+
+        function parseDifyAnswer(answer) {
+            if (!answer) return null;
+            return extractFinalAnswerOrRaw(answer);
+        }
+
+        // ============ File Upload ============
+        const uploadZone = document.getElementById('uploadZone');
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('drag-over');
+        });
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('drag-over');
+        });
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file) processFile(file);
+        });
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) processFile(file);
+        }
+
+        function processFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[sheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet);
+
+                    testData = json.map((row, idx) => ({
+                        id: row['测试ID'] || `T${String(idx + 1).padStart(3, '0')}`,
+                        difficulty: row['难度'] || '-',
+                        metric: row['指标'] || '-',
+                        dimension: row['维度'] || '-',
+                        question: row['用户问题'] || '',
+                        expected: row['预期SQL逻辑'] || ''
+                    }));
+
+                    results = testData.map(t => ({
+                        ...t,
+                        status: 'pending',
+                        response: null,
+                        parsedAnswer: null,
+                        error: null,
+                        time: null
+                    }));
+
+                    updateUI();
+                    document.getElementById('uploadIcon').classList.add('hidden');
+                    document.getElementById('uploadedFile').classList.remove('hidden');
+                    document.getElementById('uploadedFileName').textContent = file.name;
+                    document.getElementById('uploadedFileCount').textContent = `${testData.length} 条测试数据`;
+                    document.getElementById('startBtn').disabled = false;
+                    document.getElementById('exportBtn').disabled = false;
+
+                } catch (err) {
+                    alert('文件解析失败: ' + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // ============ UI Update ============
+        function updateUI() {
+            const total = results.length;
+            const pending = results.filter(r => r.status === 'pending').length;
+            const running = results.filter(r => r.status === 'running').length;
+            const success = results.filter(r => r.status === 'success').length;
+            const error = results.filter(r => r.status === 'error').length;
+            const rate = total > 0 ? Math.round((success / total) * 100) : 0;
+
+            document.getElementById('totalTests').textContent = total;
+            document.getElementById('pendingTests').textContent = pending + running;
+            document.getElementById('successTests').textContent = success;
+            document.getElementById('errorTests').textContent = error;
+            document.getElementById('successRate').textContent = rate + '%';
+
+            renderTable();
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('resultsBody');
+            const filter = document.getElementById('statusFilter').value;
+            const search = document.getElementById('searchInput').value.toLowerCase();
+
+            let filtered = results;
+            if (filter !== 'all') {
+                filtered = results.filter(r => r.status === filter);
+            }
+            if (search) {
+                filtered = filtered.filter(r =>
+                    r.id.toLowerCase().includes(search) ||
+                    r.question.toLowerCase().includes(search) ||
+                    r.metric.toLowerCase().includes(search)
+                );
+            }
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="px-4 py-12 text-center text-slate-400">
+                            <p>没有匹配的数据</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(r => {
+                const statusIcon = {
+                    pending: '<span class="inline-flex items-center gap-1 text-slate-400"><span class="w-2 h-2 rounded-full bg-slate-300"></span>待执行</span>',
+                    running: '<span class="inline-flex items-center gap-1 text-blue-500"><span class="w-2 h-2 rounded-full bg-blue-500 pulse-dot"></span>执行中</span>',
+                    success: '<span class="inline-flex items-center gap-1 text-green-500"><span class="w-2 h-2 rounded-full bg-green-500"></span>成功</span>',
+                    error: '<span class="inline-flex items-center gap-1 text-red-500"><span class="w-2 h-2 rounded-full bg-red-500"></span>失败</span>'
+                }[r.status];
+
+                return `
+                    <tr class="table-row fade-in">
+                        <td class="px-4 py-3 text-sm font-medium text-slate-800 dark:text-slate-200">${r.id}</td>
+                        <td class="px-4 py-3 text-sm"><span class="px-2 py-0.5 rounded-full text-xs ${r.difficulty.includes('1') ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : r.difficulty.includes('2') ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}">${r.difficulty}</span></td>
+                        <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">${r.metric}</td>
+                        <td class="px-4 py-3 text-sm text-slate-800 dark:text-slate-200 truncate max-w-xs" title="${r.question}">${r.question}</td>
+                        <td class="px-4 py-3 text-sm">${statusIcon}</td>
+                        <td class="px-4 py-3 text-sm text-slate-600 dark:text-slate-400">${r.time ? r.time + 'ms' : '-'}</td>
+                        <td class="px-4 py-3 text-sm">
+                            <button onclick='showDetail("${r.id}")' class="text-purple-500 hover:text-purple-700 dark:hover:text-purple-400 font-medium">查看</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterResults() {
+            renderTable();
+        }
+
+        let sortField = null;
+        let sortAsc = true;
+        function sortTable(field) {
+            if (sortField === field) {
+                sortAsc = !sortAsc;
+            } else {
+                sortField = field;
+                sortAsc = true;
+            }
+
+            results.sort((a, b) => {
+                if (field === 'id') {
+                    return sortAsc ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id);
+                } else if (field === 'time') {
+                    return sortAsc ? (a.time || 0) - (b.time || 0) : (b.time || 0) - (a.time || 0);
+                }
+                return 0;
+            });
+
+            renderTable();
+        }
+
+        // ============ Modal ============
+        function showDetail(id) {
+            const r = results.find(item => item.id === id);
+            if (!r) return;
+
+            document.getElementById('modalTitle').textContent = `测试详情 - ${r.id}`;
+
+            let tasksHtml = '';
+            if (r.response && r.response.metadata && r.response.metadata.usage) {
+                const usage = r.response.metadata.usage;
+                tasksHtml = `
+                    <div class="grid grid-cols-3 gap-3 mb-4">
+                        <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                            <p class="text-xs text-slate-500 mb-1">Prompt Tokens</p>
+                            <p class="font-medium text-slate-800 dark:text-slate-200">${usage.prompt_tokens || 0}</p>
+                        </div>
+                        <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                            <p class="text-xs text-slate-500 mb-1">Completion Tokens</p>
+                            <p class="font-medium text-slate-800 dark:text-slate-200">${usage.completion_tokens || 0}</p>
+                        </div>
+                        <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                            <p class="text-xs text-slate-500 mb-1">Total Tokens</p>
+                            <p class="font-medium text-slate-800 dark:text-slate-200">${usage.total_tokens || 0}</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('modalContent').innerHTML = `
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                            <p class="text-xs text-slate-500 mb-1">测试ID</p>
+                            <p class="font-medium text-slate-800 dark:text-slate-200">${r.id}</p>
+                        </div>
+                        <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                            <p class="text-xs text-slate-500 mb-1">难度</p>
+                            <p class="font-medium text-slate-800 dark:text-slate-200">${r.difficulty}</p>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                        <p class="text-xs text-slate-500 mb-1">指标</p>
+                        <p class="font-medium text-slate-800 dark:text-slate-200">${r.metric}</p>
+                    </div>
+                    <div class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
+                        <p class="text-xs text-purple-600 dark:text-purple-400 mb-1">用户问题</p>
+                        <p class="font-medium text-slate-800 dark:text-slate-200">${r.question}</p>
+                    </div>
+                    <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                        <p class="text-xs text-blue-600 dark:text-blue-400 mb-1">预期SQL逻辑</p>
+                        <p class="font-medium text-slate-800 dark:text-slate-200 font-mono text-sm break-all">${r.expected || '-'}</p>
+                    </div>
+                    ${tasksHtml}
+                    ${r.response || r.error ? `
+                        <div class="p-3 ${r.status === 'success' ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'} rounded-xl">
+                            <p class="text-xs ${r.status === 'success' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'} mb-1">解析后的结果</p>
+                            <pre class="font-medium text-slate-800 dark:text-slate-200 text-sm whitespace-pre-wrap">${r.parsedAnswer || (r.error || '')}</pre>
+                        </div>
+                        <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                            <p class="text-xs text-slate-500 mb-1">原始API返回</p>
+                            <pre class="font-medium text-slate-800 dark:text-slate-200 text-xs whitespace-pre-wrap break-all max-h-40 overflow-auto">${JSON.stringify(r.response, null, 2)}</pre>
+                        </div>
+                        <div class="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-xl">
+                            <p class="text-xs text-slate-500 mb-1">耗时</p>
+                            <p class="font-medium text-slate-800 dark:text-slate-200">${r.time}ms</p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+            document.getElementById('resultModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('resultModal').classList.add('hidden');
+        }
+
+        // ============ Testing Control ============
+        function startTesting() {
+            if (!testData.length) {
+                alert('请先上传测试文件');
+                return;
+            }
+
+            const apiUrl = document.getElementById('apiUrl').value;
+            if (!apiUrl) {
+                alert('请输入API接口地址');
+                return;
+            }
+
+            isRunning = true;
+            isPaused = false;
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('pauseBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('progressContainer').style.display = 'block';
+            startTime = Date.now();
+
+            processNext();
+        }
+
+        async function processNext() {
+            if (!isRunning || isPaused) return;
+
+            const pending = results.filter(r => r.status === 'pending');
+            if (pending.length === 0) {
+                finishTesting();
+                return;
+            }
+
+            const concurrency = parseInt(document.getElementById('concurrency').value) || 3;
+            const batchSize = Math.min(concurrency, pending.length);
+            const batch = pending.slice(0, batchSize);
+
+            document.getElementById('currentStatus').textContent = `执行中... (剩余 ${pending.length})`;
+
+            await Promise.all(batch.map(processOne));
+
+            updateProgress();
+            updateUI();
+
+            if (isRunning && !isPaused) {
+                setTimeout(processNext, 100);
+            }
+        }
+
+        async function processOne(item) {
+            const idx = results.findIndex(r => r.id === item.id);
+            if (idx === -1) return;
+
+            results[idx].status = 'running';
+            updateUI();
+
+            const apiUrl = document.getElementById('apiUrl').value;
+            const apiToken = document.getElementById('apiToken').value;
+            const empCode = document.getElementById('empCode').value || CONFIG.defaultEmpCode;
+            const currentTime = document.getElementById('currentTime').value || '2026-02-06 11:00:00';
+            const timeout = (parseInt(document.getElementById('timeout').value) || 60) * 1000;
+
+            const requestBody = {
+                inputs: {
+                    emp_code: empCode,
+                    current_time: currentTime
+                },
+                query: item.question,
+                response_mode: 'blocking',
+                user: empCode
+            };
+
+            const start = Date.now();
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': apiToken
+                    },
+                    body: JSON.stringify(requestBody),
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                const data = await response.json();
+
+                let parsedAnswer = null;
+                if (data.answer) {
+                    parsedAnswer = parseDifyAnswer(data.answer);
+                }
+
+                results[idx].status = response.ok ? 'success' : 'error';
+                results[idx].response = data;
+                results[idx].parsedAnswer = parsedAnswer;
+                results[idx].error = response.ok ? null : `HTTP ${response.status}: ${data.message || data.error || ''}`;
+                results[idx].time = Date.now() - start;
+
+            } catch (err) {
+                results[idx].status = 'error';
+                results[idx].error = err.name === 'AbortError' ? '请求超时' : err.message;
+                results[idx].time = Date.now() - start;
+            }
+        }
+
+        function updateProgress() {
+            const total = results.length;
+            const completed = results.filter(r => r.status === 'success' || r.status === 'error').length;
+
+            document.getElementById('progressBar').style.width = (completed / total * 100) + '%';
+            document.getElementById('progressText').textContent = `${completed}/${total}`;
+
+            if (completed > 0 && startTime) {
+                const elapsed = Date.now() - startTime;
+                const avgTime = elapsed / completed;
+                const remaining = total - completed;
+                const estMs = avgTime * remaining;
+                const estSec = Math.ceil(estMs / 1000);
+                const min = Math.floor(estSec / 60);
+                const sec = estSec % 60;
+                document.getElementById('estimatedTime').textContent = `预计剩余: ${min}:${sec.toString().padStart(2, '0')}`;
+            }
+        }
+
+        function pauseTesting() {
+            isPaused = !isPaused;
+            document.getElementById('pauseBtn').innerHTML = isPaused ? `
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                </svg>
+                继续
+            ` : `
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                暂停
+            `;
+
+            if (!isPaused && isRunning) {
+                processNext();
+            }
+        }
+
+        function stopTesting() {
+            isRunning = false;
+            isPaused = false;
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('pauseBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('currentStatus').textContent = '已停止';
+        }
+
+        function finishTesting() {
+            isRunning = false;
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('pauseBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('currentStatus').textContent = '执行完成';
+            document.getElementById('estimatedTime').textContent = '总耗时: ' + formatTime(Date.now() - startTime);
+        }
+
+        function formatTime(ms) {
+            const sec = Math.floor(ms / 1000);
+            const min = Math.floor(sec / 60);
+            const s = sec % 60;
+            return `${min}:${s.toString().padStart(2, '0')}`;
+        }
+
+        // ============ Export ============
+        function exportResults() {
+            if (!results.length) return;
+
+            const exportData = results.map(r => ({
+                '测试ID': r.id,
+                '难度': r.difficulty,
+                '指标': r.metric,
+                '维度': r.dimension,
+                '用户问题': r.question,
+                '预期SQL逻辑': r.expected,
+                '状态': r.status === 'success' ? '成功' : r.status === 'error' ? '失败' : '待执行',
+                '耗时(ms)': r.time || '',
+                '解析结果': r.parsedAnswer || '',
+                '错误信息': r.error || '',
+                'ConversationID': r.response?.conversation_id || ''
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '测试结果');
+
+            const fileName = `ChatBI测试结果_${new Date().toISOString().slice(0, 10)}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+        }
+
+        // ============ Event Listeners ============
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        document.getElementById('resultModal').addEventListener('click', (e) => {
+            if (e.target.id === 'resultModal') closeModal();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+# Node
+node_modules/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Temporary files
+/tmp/
+*.tmp
