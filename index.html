@@ -384,11 +384,23 @@
     <script>
         // ============ 配置 ============
         const CONFIG = {
-            // 请在界面上填写 API 配置信息
-            apiUrl: '',
-            defaultToken: '',
-            defaultEmpCode: ''
+            apiUrl: 'http://tdify.fat0.qa.nt.ctripcorp.com/v1/chat-messages',
+            defaultToken: 'Bearer app-GoAF9HFpx0KPKOcqxlCmhBvV',
+            defaultEmpCode: 'S66597'
         };
+
+        // 自动填充配置（不显示在界面上）
+        window.addEventListener('DOMContentLoaded', () => {
+            if (!document.getElementById('apiUrl').value) {
+                document.getElementById('apiUrl').value = CONFIG.apiUrl;
+            }
+            if (!document.getElementById('apiToken').value) {
+                document.getElementById('apiToken').value = CONFIG.defaultToken;
+            }
+            if (!document.getElementById('empCode').value) {
+                document.getElementById('empCode').value = CONFIG.defaultEmpCode;
+            }
+        });
 
         // ============ State ============
         let testData = [];
